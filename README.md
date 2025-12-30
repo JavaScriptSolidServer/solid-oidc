@@ -1,18 +1,37 @@
 # solid-oidc
 
-Minimal, zero-build Solid-OIDC client for browsers.
+[![npm version](https://img.shields.io/npm/v/solid-oidc.svg)](https://www.npmjs.com/package/solid-oidc)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#)
 
-A single JavaScript file (~500 lines) that handles the complete Solid-OIDC authentication flow. No bundler, no transpiler, no build step required.
+**Minimal, zero-build Solid-OIDC client for browsers.**
+
+A single JavaScript file (~600 lines) that handles the complete Solid-OIDC authentication flow. No bundler, no transpiler, no build step required.
+
+[**Live Demo**](https://javascriptsolidserver.github.io/solid-oidc/example.html) · [**API Reference**](#api-reference) · [**Examples**](#advanced-usage)
+
+---
+
+## Why solid-oidc?
+
+| Feature | solid-oidc | Other libraries |
+|---------|------------|-----------------|
+| **Size** | ~600 lines | 5,000+ lines |
+| **Build step** | None | Required |
+| **Copy-paste ready** | Yes | No |
+| **Readable source** | Yes | Compiled/minified |
 
 ## Features
 
-- **Zero build step** - Just import and use
-- **Single file** - Copy `solid-oidc.js` or import from CDN
-- **~500 lines** - Readable, auditable, hackable
-- **Full Solid-OIDC** - Login, logout, token refresh, authenticated fetch
-- **DPoP bound tokens** - Secure proof-of-possession
-- **Persistent sessions** - Survives page refresh via IndexedDB
-- **Event-driven** - React to session state changes
+- **Zero build step** — Import from CDN or copy the file
+- **Single file** — One `solid-oidc.js`, nothing else
+- **~600 lines** — Readable, auditable, hackable
+- **Full Solid-OIDC** — Login, logout, token refresh, authenticated fetch
+- **DPoP bound tokens** — Secure proof-of-possession (RFC 9449)
+- **Persistent sessions** — Survives page refresh via IndexedDB
+- **Event-driven** — React to session state changes
+
+---
 
 ## Quick Start
 
@@ -60,6 +79,10 @@ A single JavaScript file (~500 lines) that handles the complete Solid-OIDC authe
 </html>
 ```
 
+**That's it.** No npm install, no webpack, no configuration.
+
+---
+
 ## Installation
 
 ### Option 1: CDN (Recommended)
@@ -80,11 +103,13 @@ import { Session } from 'solid-oidc'
 
 ### Option 3: Copy the file
 
-Just copy `solid-oidc.js` into your project and import it:
+Download [`solid-oidc.js`](solid-oidc.js) and import it directly:
 
 ```js
 import { Session } from './solid-oidc.js'
 ```
+
+---
 
 ## API Reference
 
@@ -115,9 +140,10 @@ Redirect user to identity provider for authentication.
 await session.login('https://solidcommunity.net', window.location.href)
 ```
 
-**Parameters:**
-- `idp` - Identity provider URL (e.g., `https://solidcommunity.net`)
-- `redirectUri` - URL to redirect back to after login
+| Parameter | Description |
+|-----------|-------------|
+| `idp` | Identity provider URL (e.g., `https://solidcommunity.net`) |
+| `redirectUri` | URL to redirect back to after login |
 
 ### `session.handleRedirectFromLogin()`
 
@@ -181,7 +207,7 @@ The session extends `EventTarget` and emits these events:
 |-------|--------|-------------|
 | `sessionStateChange` | `{ isActive, webId }` | Login/logout occurred |
 | `sessionExpirationWarning` | `{ expires_in }` | Token refresh failed but not expired |
-| `sessionExpiration` | - | Token expired and refresh failed |
+| `sessionExpiration` | — | Token expired and refresh failed |
 
 ```js
 session.addEventListener('sessionStateChange', (event) => {
@@ -189,6 +215,8 @@ session.addEventListener('sessionStateChange', (event) => {
   console.log('WebID:', event.detail.webId)
 })
 ```
+
+---
 
 ## Advanced Usage
 
@@ -204,7 +232,7 @@ const session = new Session({ database })
 
 ### Pre-registered Client ID
 
-If your app has a pre-registered client ID, provide it to skip dynamic registration:
+Skip dynamic registration by providing your client ID:
 
 ```js
 const session = new Session({
@@ -217,8 +245,8 @@ const session = new Session({
 ```js
 const providers = [
   { name: 'Solid Community', url: 'https://solidcommunity.net' },
-  { name: 'Inrupt PodSpaces', url: 'https://login.inrupt.com' },
-  { name: 'solidweb.org', url: 'https://solidweb.org' }
+  { name: 'solidweb.org', url: 'https://solidweb.org' },
+  { name: 'solidweb.me', url: 'https://solidweb.me' }
 ]
 
 // Let user choose
@@ -235,7 +263,6 @@ const session = new Session({
     try {
       await session.restore()
     } catch {
-      // Refresh failed, maybe prompt re-login
       if (confirm('Session expired. Login again?')) {
         await session.login(idp, window.location.href)
       }
@@ -244,39 +271,54 @@ const session = new Session({
 })
 ```
 
-## Specifications Implemented
+---
 
-- [RFC 6749](https://tools.ietf.org/html/rfc6749) - OAuth 2.0
-- [RFC 7636](https://tools.ietf.org/html/rfc7636) - PKCE
-- [RFC 9207](https://tools.ietf.org/html/rfc9207) - Authorization Server Issuer Identification
-- [RFC 9449](https://tools.ietf.org/html/rfc9449) - DPoP (Demonstration of Proof-of-Possession)
-- [Solid-OIDC](https://solidproject.org/TR/oidc) - Solid OIDC Specification
+## Specifications
+
+This library implements:
+
+| Specification | Description |
+|---------------|-------------|
+| [RFC 6749](https://tools.ietf.org/html/rfc6749) | OAuth 2.0 |
+| [RFC 7636](https://tools.ietf.org/html/rfc7636) | PKCE |
+| [RFC 9207](https://tools.ietf.org/html/rfc9207) | Authorization Server Issuer Identification |
+| [RFC 9449](https://tools.ietf.org/html/rfc9449) | DPoP (Demonstration of Proof-of-Possession) |
+| [Solid-OIDC](https://solidproject.org/TR/oidc) | Solid OIDC Specification |
+
+---
 
 ## Testing
 
-Open `test.html` in a browser to run the test suite. Tests cover:
+Open [`test.html`](test.html) in a browser to run the test suite:
+
+```bash
+npx serve .
+# Visit http://localhost:3000/test.html
+```
+
+Tests cover:
 - Session instantiation and state management
 - SessionDatabase (IndexedDB) operations
 - Event dispatching
 
-```bash
-# Serve locally and open test.html
-npx serve .
-# Then visit http://localhost:3000/test.html
-```
+---
 
-## Browser Requirements
+## Browser Support
 
-- ES Modules (`<script type="module">`)
-- `crypto.subtle` (requires HTTPS or localhost)
-- `indexedDB` (for session persistence)
+| Requirement | Notes |
+|-------------|-------|
+| ES Modules | `<script type="module">` |
+| `crypto.subtle` | Requires HTTPS or localhost |
+| `indexedDB` | For session persistence |
 
-Works in all modern browsers (Chrome 63+, Firefox 57+, Safari 11+, Edge 79+).
+**Supported browsers:** Chrome 63+, Firefox 57+, Safari 11+, Edge 79+
+
+---
 
 ## Credits
 
-Based on [solid-oidc-client-browser](https://github.com/uvdsl/solid-oidc-client-browser) by [uvdsl (Christoph Braun)](https://github.com/uvdsl). Refactored into a minimal, zero-dependency, single-file library.
+Based on [solid-oidc-client-browser](https://github.com/uvdsl/solid-oidc-client-browser) by [uvdsl (Christoph Braun)](https://github.com/uvdsl). Refactored into a minimal, zero-build, single-file library.
 
 ## License
 
-MIT
+[MIT](LICENSE)
