@@ -16,7 +16,7 @@ A single JavaScript file (~600 lines) that handles the complete Solid-OIDC authe
 
 | Feature | solid-oidc | Other libraries |
 |---------|------------|-----------------|
-| **Size** | ~600 lines | 5,000+ lines |
+| **Size** | ~600 lines | 1,000–5,000 lines |
 | **Build step** | None | Required |
 | **Copy-paste ready** | Yes | No |
 | **Readable source** | Yes | Compiled/minified |
