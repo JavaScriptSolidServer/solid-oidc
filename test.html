@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>solid-oidc tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    h1 { color: #569cd6; }
+    .pass { color: #6a9955; }
+    .fail { color: #f14c4c; }
+    .test { margin: 0.5rem 0; }
+    .summary {
+      margin-top: 2rem;
+      padding: 1rem;
+      border-radius: 4px;
+    }
+    .summary.pass { background: #2d4a2d; }
+    .summary.fail { background: #4a2d2d; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>solid-oidc tests</h1>
+  <div id="results"></div>
+  <div id="summary"></div>
+
+  <script type="module">
+    import { Session, SessionDatabase, SessionEvents } from './solid-oidc.js'
+
+    const results = document.getElementById('results')
+    const summaryEl = document.getElementById('summary')
+    let passed = 0
+    let failed = 0
+
+    function test(name, fn) {
+      const div = document.createElement('div')
+      div.className = 'test'
+      try {
+        fn()
+        div.innerHTML = `<span class="pass">✓</span> ${name}`
+        passed++
+      } catch (error) {
+        div.innerHTML = `<span class="fail">✗</span> ${name}<pre>${error.message}</pre>`
+        failed++
+      }
+      results.appendChild(div)
+    }
+
+    async function asyncTest(name, fn) {
+      const div = document.createElement('div')
+      div.className = 'test'
+      try {
+        await fn()
+        div.innerHTML = `<span class="pass">✓</span> ${name}`
+        passed++
+      } catch (error) {
+        div.innerHTML = `<span class="fail">✗</span> ${name}<pre>${error.message}</pre>`
+        failed++
+      }
+      results.appendChild(div)
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || 'Assertion failed')
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(message || `Expected ${expected}, got ${actual}`)
+      }
+    }
+
+    // ==========================================================================
+    // Session Tests
+    // ==========================================================================
+
+    test('Session: can be instantiated', () => {
+      const session = new Session()
+      assert(session instanceof Session)
+    })
+
+    test('Session: isActive defaults to false', () => {
+      const session = new Session()
+      assertEqual(session.isActive, false)
+    })
+
+    test('Session: webId defaults to null', () => {
+      const session = new Session()
+      assertEqual(session.webId, null)
+    })
+
+    test('Session: isExpired returns true when no token', () => {
+      const session = new Session()
+      assertEqual(session.isExpired(), true)
+    })
+
+    test('Session: getExpiresIn returns -1 when no token', () => {
+      const session = new Session()
+      assertEqual(session.getExpiresIn(), -1)
+    })
+
+    test('Session: accepts clientId option', () => {
+      const session = new Session({ clientId: 'https://example.com/id' })
+      assert(session.clientId === 'https://example.com/id')
+    })
+
+    test('Session: extends EventTarget', () => {
+      const session = new Session()
+      assert(typeof session.addEventListener === 'function')
+      assert(typeof session.removeEventListener === 'function')
+      assert(typeof session.dispatchEvent === 'function')
+    })
+
+    test('Session: accepts callback options', () => {
+      let called = false
+      const session = new Session({
+        onStateChange: () => { called = true }
+      })
+      session.dispatchEvent(new CustomEvent(SessionEvents.STATE_CHANGE))
+      assert(called, 'onStateChange should be called')
+    })
+
+    // ==========================================================================
+    // SessionDatabase Tests
+    // ==========================================================================
+
+    asyncTest('SessionDatabase: can be instantiated', async () => {
+      const db = new SessionDatabase('test-db-1')
+      assert(db instanceof SessionDatabase)
+    })
+
+    asyncTest('SessionDatabase: init creates database', async () => {
+      const db = new SessionDatabase('test-db-2')
+      await db.init()
+      assert(db.db !== null)
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: setItem and getItem work', async () => {
+      const db = new SessionDatabase('test-db-3')
+      await db.init()
+      await db.setItem('key1', 'value1')
+      const value = await db.getItem('key1')
+      assertEqual(value, 'value1')
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: getItem returns null for missing key', async () => {
+      const db = new SessionDatabase('test-db-4')
+      await db.init()
+      const value = await db.getItem('nonexistent')
+      assertEqual(value, null)
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: deleteItem removes item', async () => {
+      const db = new SessionDatabase('test-db-5')
+      await db.init()
+      await db.setItem('key2', 'value2')
+      await db.deleteItem('key2')
+      const value = await db.getItem('key2')
+      assertEqual(value, null)
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: clear removes all items', async () => {
+      const db = new SessionDatabase('test-db-6')
+      await db.init()
+      await db.setItem('a', '1')
+      await db.setItem('b', '2')
+      await db.clear()
+      const a = await db.getItem('a')
+      const b = await db.getItem('b')
+      assertEqual(a, null)
+      assertEqual(b, null)
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: stores complex objects', async () => {
+      const db = new SessionDatabase('test-db-7')
+      await db.init()
+      const obj = { foo: 'bar', nums: [1, 2, 3] }
+      await db.setItem('obj', obj)
+      const retrieved = await db.getItem('obj')
+      assertEqual(retrieved.foo, 'bar')
+      assertEqual(retrieved.nums.length, 3)
+      db.close()
+    })
+
+    asyncTest('SessionDatabase: close sets db to null', async () => {
+      const db = new SessionDatabase('test-db-8')
+      await db.init()
+      db.close()
+      assertEqual(db.db, null)
+    })
+
+    // ==========================================================================
+    // SessionEvents Tests
+    // ==========================================================================
+
+    test('SessionEvents: has STATE_CHANGE', () => {
+      assertEqual(SessionEvents.STATE_CHANGE, 'sessionStateChange')
+    })
+
+    test('SessionEvents: has EXPIRATION_WARNING', () => {
+      assertEqual(SessionEvents.EXPIRATION_WARNING, 'sessionExpirationWarning')
+    })
+
+    test('SessionEvents: has EXPIRATION', () => {
+      assertEqual(SessionEvents.EXPIRATION, 'sessionExpiration')
+    })
+
+    // ==========================================================================
+    // Session.logout Tests
+    // ==========================================================================
+
+    asyncTest('Session: logout clears state', async () => {
+      const session = new Session()
+      await session.logout()
+      assertEqual(session.isActive, false)
+      assertEqual(session.webId, null)
+    })
+
+    asyncTest('Session: logout dispatches state change', async () => {
+      const session = new Session()
+      let eventFired = false
+      session.addEventListener(SessionEvents.STATE_CHANGE, () => {
+        eventFired = true
+      })
+      await session.logout()
+      assert(eventFired, 'STATE_CHANGE event should fire')
+    })
+
+    // ==========================================================================
+    // Session.authFetch Tests
+    // ==========================================================================
+
+    asyncTest('Session: authFetch falls back to regular fetch when not active', async () => {
+      const session = new Session()
+      // This should not throw, just use regular fetch
+      // We can't really test the response without a server, but we can test it doesn't throw
+      try {
+        await session.authFetch('https://example.com', { method: 'HEAD' })
+      } catch (e) {
+        // Network error is expected in test environment, but not a code error
+        assert(e.name === 'TypeError' || e.message.includes('fetch'),
+          'Should be a network error, not a code error')
+      }
+    })
+
+    // ==========================================================================
+    // Summary
+    // ==========================================================================
+
+    setTimeout(() => {
+      const total = passed + failed
+      summaryEl.className = `summary ${failed === 0 ? 'pass' : 'fail'}`
+      summaryEl.innerHTML = `
+        <strong>${passed}/${total} tests passed</strong>
+        ${failed > 0 ? `<br>${failed} tests failed` : ''}
+      `
+    }, 100)
+
+    // Cleanup test databases
+    setTimeout(async () => {
+      for (let i = 1; i <= 8; i++) {
+        indexedDB.deleteDatabase(`test-db-${i}`)
+      }
+    }, 1000)
+  </script>
+</body>
+</html>

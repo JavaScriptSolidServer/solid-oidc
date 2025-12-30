@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solid-OIDC Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      line-height: 1.6;
+    }
+    h1 { color: #7c4dff; }
+    .card {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .status.active { background: #c8e6c9; color: #2e7d32; }
+    .status.inactive { background: #ffcdd2; color: #c62828; }
+    button {
+      background: #7c4dff;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.25rem;
+    }
+    button:hover { background: #651fff; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #757575; }
+    button.secondary:hover { background: #616161; }
+    input, select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin: 0.5rem 0;
+    }
+    pre {
+      background: #263238;
+      color: #aed581;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.875rem;
+    }
+    .webid { word-break: break-all; color: #7c4dff; }
+    label { font-weight: 500; display: block; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Solid-OIDC Demo</h1>
+
+  <div class="card">
+    <p>
+      Status: <span id="status" class="status inactive">Not logged in</span>
+    </p>
+    <p id="webid-display" hidden>
+      WebID: <span id="webid" class="webid"></span>
+    </p>
+  </div>
+
+  <div id="login-form" class="card">
+    <label for="idp">Identity Provider</label>
+    <select id="idp">
+      <option value="https://solidcommunity.net">solidcommunity.net</option>
+      <option value="https://login.inrupt.com">login.inrupt.com</option>
+      <option value="https://solidweb.org">solidweb.org</option>
+      <option value="custom">Custom...</option>
+    </select>
+    <input type="url" id="custom-idp" placeholder="https://your-provider.example" hidden>
+    <br>
+    <button id="login-btn">Login with Solid</button>
+  </div>
+
+  <div id="session-controls" class="card" hidden>
+    <button id="fetch-btn">Fetch Profile</button>
+    <button id="logout-btn" class="secondary">Logout</button>
+  </div>
+
+  <div id="output-section" hidden>
+    <h3>Response</h3>
+    <pre id="output"></pre>
+  </div>
+
+  <script type="module">
+    // Import from local file (or use CDN: https://esm.sh/gh/JavaScriptSolidServer/solid-oidc/solid-oidc.js)
+    import { Session } from './solid-oidc.js'
+
+    // DOM elements
+    const statusEl = document.getElementById('status')
+    const webidEl = document.getElementById('webid')
+    const webidDisplay = document.getElementById('webid-display')
+    const loginForm = document.getElementById('login-form')
+    const sessionControls = document.getElementById('session-controls')
+    const outputSection = document.getElementById('output-section')
+    const outputEl = document.getElementById('output')
+    const idpSelect = document.getElementById('idp')
+    const customIdp = document.getElementById('custom-idp')
+
+    // Create session
+    const session = new Session({
+      onStateChange: (event) => {
+        const { isActive, webId } = event.detail
+        updateUI(isActive, webId)
+      }
+    })
+
+    // Update UI based on session state
+    function updateUI(isActive, webId) {
+      statusEl.textContent = isActive ? 'Logged in' : 'Not logged in'
+      statusEl.className = `status ${isActive ? 'active' : 'inactive'}`
+      webidEl.textContent = webId || ''
+      webidDisplay.hidden = !isActive
+      loginForm.hidden = isActive
+      sessionControls.hidden = !isActive
+    }
+
+    // Handle custom IDP selection
+    idpSelect.onchange = () => {
+      customIdp.hidden = idpSelect.value !== 'custom'
+    }
+
+    // Get selected IDP
+    function getIdp() {
+      return idpSelect.value === 'custom' ? customIdp.value : idpSelect.value
+    }
+
+    // Login button
+    document.getElementById('login-btn').onclick = async () => {
+      const idp = getIdp()
+      if (!idp) {
+        alert('Please enter an identity provider URL')
+        return
+      }
+      try {
+        await session.login(idp, window.location.href)
+      } catch (error) {
+        alert(`Login error: ${error.message}`)
+      }
+    }
+
+    // Logout button
+    document.getElementById('logout-btn').onclick = async () => {
+      await session.logout()
+      outputSection.hidden = true
+    }
+
+    // Fetch profile button
+    document.getElementById('fetch-btn').onclick = async () => {
+      try {
+        outputEl.textContent = 'Fetching...'
+        outputSection.hidden = false
+
+        const response = await session.authFetch(session.webId, {
+          headers: { 'Accept': 'text/turtle' }
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.text()
+        outputEl.textContent = data
+      } catch (error) {
+        outputEl.textContent = `Error: ${error.message}`
+      }
+    }
+
+    // On page load: handle redirect and try restore
+    async function init() {
+      try {
+        // Handle redirect from IDP
+        await session.handleRedirectFromLogin()
+      } catch (error) {
+        console.error('Redirect handling error:', error)
+      }
+
+      // Try to restore previous session
+      if (!session.isActive) {
+        try {
+          await session.restore()
+        } catch {
+          // No session to restore, that's fine
+        }
+      }
+
+      // Initial UI state
+      updateUI(session.isActive, session.webId)
+    }
+
+    init()
+  </script>
+</body>
+</html>

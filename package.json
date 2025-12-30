@@ -1,0 +1,49 @@
+{
+  "name": "solid-oidc",
+  "version": "0.0.1",
+  "description": "Minimal, zero-build Solid-OIDC client for browsers",
+  "type": "module",
+  "main": "solid-oidc.js",
+  "module": "solid-oidc.js",
+  "exports": {
+    ".": {
+      "import": "./solid-oidc.js",
+      "default": "./solid-oidc.js"
+    }
+  },
+  "files": [
+    "solid-oidc.js"
+  ],
+  "scripts": {
+    "test": "echo \"Open test.html in a browser to run tests\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JavaScriptSolidServer/solid-oidc.git"
+  },
+  "keywords": [
+    "solid",
+    "oidc",
+    "oauth",
+    "authentication",
+    "webid",
+    "dpop",
+    "decentralized",
+    "linked-data"
+  ],
+  "author": "JavaScriptSolidServer",
+  "contributors": [
+    {
+      "name": "Christoph Braun (uvdsl)",
+      "url": "https://github.com/uvdsl"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JavaScriptSolidServer/solid-oidc/issues"
+  },
+  "homepage": "https://github.com/JavaScriptSolidServer/solid-oidc#readme",
+  "engines": {
+    "node": ">=14"
+  }
+}
