@@ -1,6 +1,6 @@
 {
   "name": "solid-oidc",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Minimal, zero-build Solid-OIDC client for browsers",
   "type": "module",
   "main": "solid-oidc.js",
@@ -45,5 +45,8 @@
   "homepage": "https://github.com/JavaScriptSolidServer/solid-oidc#readme",
   "engines": {
     "node": ">=14"
+  },
+  "dependencies": {
+    "jose": "^5.9.6"
   }
 }
