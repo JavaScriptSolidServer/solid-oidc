@@ -4,7 +4,7 @@
  * A zero-build, single-file Solid-OIDC authentication library.
  *
  * @license MIT
- * @author JavaScriptSolidServer
+ * @author Melvin Carvalho
  * @see https://github.com/JavaScriptSolidServer/solid-oidc
  *
  * Based on solid-oidc-client-browser by uvdsl (Christoph Braun)
