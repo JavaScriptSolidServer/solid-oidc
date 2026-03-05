@@ -98,6 +98,16 @@ async function verifyJWT(token, jwksUri, options = {}) {
     if (!aud.includes(options.audience)) throw new Error('Audience mismatch')
   }
 
+  // Time-based claims (exp, nbf) with 60s clock skew tolerance
+  const now = Math.floor(Date.now() / 1000)
+  const skew = 60
+  if (typeof payload.exp === 'number' && now - skew > payload.exp) {
+    throw new Error('Token expired')
+  }
+  if (typeof payload.nbf === 'number' && now + skew < payload.nbf) {
+    throw new Error('Token not yet valid')
+  }
+
   // Fetch JWKS and find matching key
   const response = await fetch(jwksUri)
   if (!response.ok) throw new Error(`JWKS fetch failed: ${response.status}`)
