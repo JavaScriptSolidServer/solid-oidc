@@ -53,7 +53,7 @@ async function signJWT(payload, privateKey, protectedHeader) {
   const signingInput = new TextEncoder().encode(`${header}.${body}`)
 
   const signature = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
+    { name: 'ECDSA', hash: { name: 'SHA-256' } },
     privateKey,
     signingInput
   )
@@ -65,19 +65,19 @@ function getImportAlgorithm(alg) {
   const algorithms = {
     ES256: { name: 'ECDSA', namedCurve: 'P-256' },
     ES384: { name: 'ECDSA', namedCurve: 'P-384' },
-    RS256: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    RS384: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-384' },
-    RS512: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' },
-    PS256: { name: 'RSA-PSS', hash: 'SHA-256' },
-    PS384: { name: 'RSA-PSS', hash: 'SHA-384' },
-    PS512: { name: 'RSA-PSS', hash: 'SHA-512' }
+    RS256: { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } },
+    RS384: { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-384' } },
+    RS512: { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' } },
+    PS256: { name: 'RSA-PSS', hash: { name: 'SHA-256' } },
+    PS384: { name: 'RSA-PSS', hash: { name: 'SHA-384' } },
+    PS512: { name: 'RSA-PSS', hash: { name: 'SHA-512' } }
   }
   if (!algorithms[alg]) throw new Error(`Unsupported algorithm: ${alg}`)
   return algorithms[alg]
 }
 
 function getVerifyAlgorithm(alg) {
-  if (alg.startsWith('ES')) return { name: 'ECDSA', hash: `SHA-${alg.slice(2)}` }
+  if (alg.startsWith('ES')) return { name: 'ECDSA', hash: { name: `SHA-${alg.slice(2)}` } }
   if (alg.startsWith('RS')) return { name: 'RSASSA-PKCS1-v1_5' }
   if (alg.startsWith('PS')) return { name: 'RSA-PSS', saltLength: parseInt(alg.slice(2)) / 8 }
   throw new Error(`Unsupported algorithm: ${alg}`)
