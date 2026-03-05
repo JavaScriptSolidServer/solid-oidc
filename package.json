@@ -1,7 +1,7 @@
 {
   "name": "solid-oidc",
-  "version": "0.0.6",
-  "description": "Minimal, zero-build Solid-OIDC client for browsers",
+  "version": "0.0.7",
+  "description": "Minimal, zero-build, zero-dependency Solid-OIDC client for browsers",
   "type": "module",
   "main": "solid-oidc.js",
   "module": "solid-oidc.js",
@@ -46,7 +46,5 @@
   "engines": {
     "node": ">=14"
   },
-  "dependencies": {
-    "jose": "^5.9.6"
-  }
+  "dependencies": {}
 }
