@@ -1,7 +1,27 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+The full text of the GNU Affero General Public License version 3 is
+available at: https://www.gnu.org/licenses/agpl-3.0.txt
+
+This project is licensed under the AGPL-3.0-or-later.
+
+Copyright (c) 2025 Melvin Carvalho
+Copyright (c) 2025 Christoph Braun (uvdsl)
+
+---
+
+NOTICE: Prior contributions by Christoph Braun (uvdsl) were made under
+the MIT License. The MIT License text is reproduced below for reference:
+
 MIT License
 
 Copyright (c) 2025 Christoph Braun (uvdsl)
-Copyright (c) 2025 Melvin Carvalho
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

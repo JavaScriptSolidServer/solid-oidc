@@ -1,6 +1,6 @@
 {
   "name": "solid-oidc",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Minimal, zero-build Solid-OIDC client for browsers",
   "type": "module",
   "main": "solid-oidc.js",
@@ -38,7 +38,7 @@
       "url": "https://github.com/uvdsl"
     }
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "bugs": {
     "url": "https://github.com/JavaScriptSolidServer/solid-oidc/issues"
   },
