@@ -1,9 +1,9 @@
 /**
  * solid-oidc.js - Minimal Solid-OIDC client for browsers
  *
- * A zero-build, single-file Solid-OIDC authentication library.
+ * A zero-build, zero-dependency, single-file Solid-OIDC authentication library.
  *
- * @license MIT
+ * @license AGPL-3.0-or-later
  * @author Melvin Carvalho
  * @see https://github.com/JavaScriptSolidServer/solid-oidc
  *
@@ -13,20 +13,130 @@
  * Implements:
  * - RFC 6749 - OAuth 2.0
  * - RFC 7636 - PKCE
+ * - RFC 7638 - JWK Thumbprint
  * - RFC 9207 - OAuth 2.0 Authorization Server Issuer Identification
  * - RFC 9449 - DPoP (Demonstration of Proof-of-Possession)
  * - Solid-OIDC Specification
  */
 
-import {
-  SignJWT,
-  generateKeyPair,
-  decodeJwt,
-  exportJWK,
-  createRemoteJWKSet,
-  jwtVerify,
-  calculateJwkThumbprint
-} from 'jose'
+// ============================================================================
+// Base64url Helpers
+// ============================================================================
+
+function base64urlEncode(data) {
+  if (data instanceof ArrayBuffer) data = new Uint8Array(data)
+  return btoa(String.fromCharCode(...data))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+function base64urlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/')
+  while (str.length % 4) str += '='
+  return Uint8Array.from(atob(str), c => c.charCodeAt(0))
+}
+
+// ============================================================================
+// Web Crypto JWT Helpers (replaces jose dependency)
+// ============================================================================
+
+function decodeJwt(token) {
+  const parts = token.split('.')
+  if (parts.length !== 3) throw new Error('Invalid JWT')
+  return JSON.parse(new TextDecoder().decode(base64urlDecode(parts[1])))
+}
+
+async function signJWT(payload, privateKey, protectedHeader) {
+  const header = base64urlEncode(new TextEncoder().encode(JSON.stringify(protectedHeader)))
+  const body = base64urlEncode(new TextEncoder().encode(JSON.stringify(payload)))
+  const signingInput = new TextEncoder().encode(`${header}.${body}`)
+
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    signingInput
+  )
+
+  return `${header}.${body}.${base64urlEncode(signature)}`
+}
+
+function getImportAlgorithm(alg) {
+  const algorithms = {
+    ES256: { name: 'ECDSA', namedCurve: 'P-256' },
+    ES384: { name: 'ECDSA', namedCurve: 'P-384' },
+    RS256: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    RS384: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-384' },
+    RS512: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' },
+    PS256: { name: 'RSA-PSS', hash: 'SHA-256' },
+    PS384: { name: 'RSA-PSS', hash: 'SHA-384' },
+    PS512: { name: 'RSA-PSS', hash: 'SHA-512' }
+  }
+  if (!algorithms[alg]) throw new Error(`Unsupported algorithm: ${alg}`)
+  return algorithms[alg]
+}
+
+function getVerifyAlgorithm(alg) {
+  if (alg.startsWith('ES')) return { name: 'ECDSA', hash: `SHA-${alg.slice(2)}` }
+  if (alg.startsWith('RS')) return { name: 'RSASSA-PKCS1-v1_5' }
+  if (alg.startsWith('PS')) return { name: 'RSA-PSS', saltLength: parseInt(alg.slice(2)) / 8 }
+  throw new Error(`Unsupported algorithm: ${alg}`)
+}
+
+async function verifyJWT(token, jwksUri, options = {}) {
+  const parts = token.split('.')
+  if (parts.length !== 3) throw new Error('Invalid JWT')
+
+  const header = JSON.parse(new TextDecoder().decode(base64urlDecode(parts[0])))
+  const payload = JSON.parse(new TextDecoder().decode(base64urlDecode(parts[1])))
+
+  if (options.issuer && payload.iss !== options.issuer) {
+    throw new Error(`Issuer mismatch: ${payload.iss} !== ${options.issuer}`)
+  }
+  if (options.audience) {
+    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
+    if (!aud.includes(options.audience)) throw new Error('Audience mismatch')
+  }
+
+  // Fetch JWKS and find matching key
+  const response = await fetch(jwksUri)
+  if (!response.ok) throw new Error(`JWKS fetch failed: ${response.status}`)
+  const jwks = await response.json()
+
+  const jwk = header.kid
+    ? jwks.keys.find(k => k.kid === header.kid)
+    : jwks.keys.find(k => k.alg === header.alg || (!k.alg && (!k.use || k.use === 'sig')))
+  if (!jwk) throw new Error('No matching key found in JWKS')
+
+  const publicKey = await crypto.subtle.importKey(
+    'jwk', jwk, getImportAlgorithm(header.alg), false, ['verify']
+  )
+
+  const valid = await crypto.subtle.verify(
+    getVerifyAlgorithm(header.alg),
+    publicKey,
+    base64urlDecode(parts[2]),
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+  )
+  if (!valid) throw new Error('Invalid signature')
+
+  return { payload, protectedHeader: header }
+}
+
+/** JWK Thumbprint per RFC 7638 */
+async function calculateJwkThumbprint(jwk) {
+  // Required members in lexicographic order per key type
+  let thumbprintInput
+  if (jwk.kty === 'EC') {
+    thumbprintInput = JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y })
+  } else if (jwk.kty === 'RSA') {
+    thumbprintInput = JSON.stringify({ e: jwk.e, kty: jwk.kty, n: jwk.n })
+  } else {
+    throw new Error(`Unsupported key type: ${jwk.kty}`)
+  }
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(thumbprintInput))
+  return base64urlEncode(digest)
+}
 
 // ============================================================================
 // Session Events
@@ -136,15 +246,19 @@ async function generatePKCE() {
 // ============================================================================
 
 async function createDPoPToken(keyPair, htu, htm, ath = null) {
-  const publicJwk = await exportJWK(keyPair.publicKey)
-  const payload = { htu, htm }
+  const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey)
+  // Strip non-required fields for cleaner header
+  const jwk = { kty: publicJwk.kty, crv: publicJwk.crv, x: publicJwk.x, y: publicJwk.y }
+
+  const payload = {
+    htu,
+    htm,
+    iat: Math.floor(Date.now() / 1000),
+    jti: crypto.randomUUID()
+  }
   if (ath) payload.ath = ath
 
-  return new SignJWT(payload)
-    .setIssuedAt()
-    .setJti(crypto.randomUUID())
-    .setProtectedHeader({ alg: 'ES256', typ: 'dpop+jwt', jwk: publicJwk })
-    .sign(keyPair.privateKey)
+  return signJWT(payload, keyPair.privateKey, { alg: 'ES256', typ: 'dpop+jwt', jwk })
 }
 
 async function computeAth(accessToken) {
@@ -212,14 +326,14 @@ async function requestTokens(tokenEndpoint, params, keyPair) {
 // ============================================================================
 
 async function validateAccessToken(accessToken, jwksUri, issuer, clientId, keyPair) {
-  const jwks = createRemoteJWKSet(new URL(jwksUri))
-  const { payload } = await jwtVerify(accessToken, jwks, {
+  const { payload } = await verifyJWT(accessToken, jwksUri, {
     issuer,
     audience: 'solid'
   })
 
   // Verify DPoP binding
-  const thumbprint = await calculateJwkThumbprint(await exportJWK(keyPair.publicKey))
+  const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey)
+  const thumbprint = await calculateJwkThumbprint(publicJwk)
   if (payload.cnf?.jkt !== thumbprint) {
     throw new Error('DPoP thumbprint mismatch')
   }
@@ -409,8 +523,12 @@ export class Session extends EventTarget {
       throw new Error('Missing session data')
     }
 
-    // Generate DPoP key pair
-    const keyPair = await generateKeyPair('ES256')
+    // Generate DPoP key pair (ES256 / P-256)
+    const keyPair = await crypto.subtle.generateKey(
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      true,
+      ['sign', 'verify']
+    )
 
     // Exchange code for tokens
     const tokens = await requestTokens(tokenEndpoint, {
