@@ -1,12 +1,13 @@
 # solid-oidc
 
 [![npm version](https://img.shields.io/npm/v/solid-oidc.svg)](https://www.npmjs.com/package/solid-oidc)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#)
+[![gzip size](https://img.shields.io/badge/gzip-4kb-brightgreen.svg)](#)
 
-**Minimal, zero-build Solid-OIDC client for browsers.**
+**Minimal, zero-build, zero-dependency Solid-OIDC client for browsers.**
 
-A single JavaScript file (~600 lines) that handles the complete Solid-OIDC authentication flow. No bundler, no transpiler, no build step required.
+A single JavaScript file (~700 lines, 4kb gzipped) that handles the complete Solid-OIDC authentication flow. No bundler, no transpiler, no build step, no npm dependencies. Uses the Web Crypto API natively.
 
 [**Live Demo**](https://javascriptsolidserver.github.io/solid-oidc/example.html) · [**API Reference**](#api-reference) · [**Examples**](#advanced-usage)
 
@@ -14,18 +15,25 @@ A single JavaScript file (~600 lines) that handles the complete Solid-OIDC authe
 
 ## Why solid-oidc?
 
-| Feature | solid-oidc | Other libraries |
-|---------|------------|-----------------|
-| **Size** | ~600 lines | 1,000–5,000 lines |
-| **Build step** | None | Required |
-| **Copy-paste ready** | Yes | No |
-| **Readable source** | Yes | Compiled/minified |
+| Feature | solid-oidc | @inrupt/solid-client-authn-browser | @inrupt/oidc-client |
+|---------|------------|-----------------------------------|---------------------|
+| **Unpacked size** | 34kb | 1,697kb | 18,704kb |
+| **Gzipped** | 4kb | ~170kb | ~2MB |
+| **Files in package** | 1 | 92 | 100+ |
+| **Lines of code** | ~700 | thousands | thousands |
+| **Dependencies** | 0 | 5 (+transitive) | 5 (+transitive) |
+| **Build step** | None | Rollup | Required |
+| **Copy-paste ready** | Yes | No | No |
+| **Readable source** | Yes | Compiled/minified | Compiled |
+| **Browser native crypto** | Yes (Web Crypto) | No (jose, uuid, events) | No (crypto-js, core-js) |
+| **License** | AGPL-3.0 | MIT | MIT |
 
 ## Features
 
+- **Zero dependencies** — Pure Web Crypto API, nothing to install
 - **Zero build step** — Import from CDN or copy the file
 - **Single file** — One `solid-oidc.js`, nothing else
-- **~600 lines** — Readable, auditable, hackable
+- **~700 lines, 4kb gzipped** — Readable, auditable, hackable
 - **Full Solid-OIDC** — Login, logout, token refresh, authenticated fetch
 - **DPoP bound tokens** — Secure proof-of-possession (RFC 9449)
 - **Persistent sessions** — Survives page refresh via IndexedDB
@@ -282,6 +290,7 @@ This library implements:
 | [RFC 6749](https://tools.ietf.org/html/rfc6749) | OAuth 2.0 |
 | [RFC 7636](https://tools.ietf.org/html/rfc7636) | PKCE |
 | [RFC 9207](https://tools.ietf.org/html/rfc9207) | Authorization Server Issuer Identification |
+| [RFC 7638](https://tools.ietf.org/html/rfc7638) | JWK Thumbprint |
 | [RFC 9449](https://tools.ietf.org/html/rfc9449) | DPoP (Demonstration of Proof-of-Possession) |
 | [Solid-OIDC](https://solidproject.org/TR/oidc) | Solid OIDC Specification |
 
@@ -321,4 +330,4 @@ Based on [solid-oidc-client-browser](https://github.com/uvdsl/solid-oidc-client-
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0-or-later](LICENSE)
