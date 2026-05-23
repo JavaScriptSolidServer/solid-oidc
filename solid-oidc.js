@@ -38,6 +38,16 @@ function base64urlDecode(str) {
 }
 
 // ============================================================================
+// URL Helpers
+// ============================================================================
+
+// Normalize URLs by trimming a single trailing slash, so iss/issuer
+// comparisons survive trailing-slash variance between OIDC discovery doc,
+// redirect `iss` parameter, and token `iss` claim. RFC 9207 §2.3 requires
+// comparison after normalization.
+const trimSlash = (s) => (typeof s === 'string' && s.endsWith('/')) ? s.slice(0, -1) : s
+
+// ============================================================================
 // Web Crypto JWT Helpers (replaces jose dependency)
 // ============================================================================
 
@@ -90,7 +100,7 @@ async function verifyJWT(token, jwksUri, options = {}) {
   const header = JSON.parse(new TextDecoder().decode(base64urlDecode(parts[0])))
   const payload = JSON.parse(new TextDecoder().decode(base64urlDecode(parts[1])))
 
-  if (options.issuer && payload.iss !== options.issuer) {
+  if (options.issuer && trimSlash(payload.iss) !== trimSlash(options.issuer)) {
     throw new Error(`Issuer mismatch: ${payload.iss} !== ${options.issuer}`)
   }
   if (options.audience) {
@@ -453,7 +463,6 @@ export class Session extends EventTarget {
 
     // RFC 9207: Verify issuer
     const issuer = config.issuer
-    const trimSlash = (s) => s.endsWith('/') ? s.slice(0, -1) : s
     if (trimSlash(idp) !== trimSlash(issuer)) {
       throw new Error(`Issuer mismatch: ${issuer} !== ${idp}`)
     }
@@ -507,7 +516,7 @@ export class Session extends EventTarget {
     // RFC 9207: Verify issuer
     const idp = sessionStorage.getItem('solid_oidc_idp')
     const iss = url.searchParams.get('iss')
-    if (!idp || iss !== idp) {
+    if (!idp || trimSlash(iss) !== trimSlash(idp)) {
       throw new Error(`Issuer mismatch: ${iss} !== ${idp}`)
     }
 
