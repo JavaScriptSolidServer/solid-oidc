@@ -1,6 +1,6 @@
 {
   "name": "solid-oidc",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Minimal, zero-build, zero-dependency Solid-OIDC client for browsers",
   "type": "module",
   "main": "solid-oidc.js",
