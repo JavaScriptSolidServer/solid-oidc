@@ -421,6 +421,11 @@ export class Session extends EventTarget {
     this._idpDetails = null
     this._refreshPromise = null
 
+    // Bind so authFetch survives being passed by reference (drop-in fetch):
+    // consumers hand it to rdflib / solid-logic / rdf-dereference as a bare
+    // `fetch`, which would otherwise lose `this`.
+    this.authFetch = this.authFetch.bind(this)
+
     // Set up event listeners
     if (this.onStateChange) {
       this.addEventListener(SessionEvents.STATE_CHANGE, this.onStateChange)

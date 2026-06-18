@@ -256,6 +256,23 @@
       }
     })
 
+    asyncTest('Session: authFetch survives being passed by reference (bound)', async () => {
+      const session = new Session()
+      // Bare reference, the way rdflib / solid-logic / rdf-dereference take it.
+      // Before binding this throws "Cannot read properties of undefined (reading '_isActive')".
+      const { authFetch } = session
+      const origFetch = globalThis.fetch
+      globalThis.fetch = async () => new Response(null, { status: 200 })
+      try {
+        await authFetch('https://example.com', { method: 'HEAD' })
+        assert(true, 'authFetch is callable when passed by reference')
+      } catch (e) {
+        assert(false, `authFetch lost its binding when passed by reference: ${e.message}`)
+      } finally {
+        globalThis.fetch = origFetch
+      }
+    })
+
     // ==========================================================================
     // Summary
     // ==========================================================================
