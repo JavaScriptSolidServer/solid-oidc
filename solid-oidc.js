@@ -493,6 +493,10 @@ export class Session extends EventTarget {
     const csrfToken = crypto.randomUUID()
     sessionStorage.setItem('solid_oidc_csrf', csrfToken)
 
+    // The token request must repeat the exact redirect_uri used here
+    // (RFC 6749 §4.1.3), query string included
+    sessionStorage.setItem('solid_oidc_redirect_uri', sanitizedRedirect)
+
     // Build authorization URL
     const authUrl = new URL(config.authorization_endpoint)
     authUrl.searchParams.set('response_type', 'code')
@@ -542,6 +546,7 @@ export class Session extends EventTarget {
     const tokenEndpoint = sessionStorage.getItem('solid_oidc_token_endpoint')
     const jwksUri = sessionStorage.getItem('solid_oidc_jwks_uri')
     const clientId = this.clientId || sessionStorage.getItem('solid_oidc_client_id')
+    const redirectUri = sessionStorage.getItem('solid_oidc_redirect_uri') || url.origin + url.pathname + url.search
 
     if (!pkceVerifier || !tokenEndpoint || !clientId) {
       throw new Error('Missing session data')
@@ -559,7 +564,7 @@ export class Session extends EventTarget {
       grant_type: 'authorization_code',
       code,
       code_verifier: pkceVerifier,
-      redirect_uri: url.origin + url.pathname,
+      redirect_uri: redirectUri,
       client_id: clientId
     }, keyPair)
 
@@ -588,6 +593,7 @@ export class Session extends EventTarget {
     sessionStorage.removeItem('solid_oidc_client_id')
     sessionStorage.removeItem('solid_oidc_pkce_verifier')
     sessionStorage.removeItem('solid_oidc_csrf')
+    sessionStorage.removeItem('solid_oidc_redirect_uri')
 
     // Update session state
     await this._setTokens({ ...tokens, dpop_key_pair: keyPair })
